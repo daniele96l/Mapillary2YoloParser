@@ -32,7 +32,7 @@ def parse(t,filename):
 
         if (key == 'objects'):
             for object in value:  # each sigle object
-                for key2 in object:  # raga sto male, dentro le proprietà dell'oggetto
+                for key2 in object:  # dentro le proprietà dell'oggetto
                     if(key2 == 'bbox'):
                         bbox = object.get(key2, 'key not exist') #i take the boundign box
                         for key3 in bbox:
@@ -80,10 +80,10 @@ def saveFile(labels, xmin_n, xmax_n, ymax_n, ymin_n,filename):
 def normalize(imageWidth,imageHeight,xmin,ymin,xmax,ymax):
     xmin_n,xmax_n,ymax_n,ymin_n =  ([] for i in range(4)) #just declare 5 list
     for i in range(len(xmin)):
-        xmin_n.append(xmin[i]/imageHeight)
+        xmin_n.append(xmin[i]/imageWidth)
         xmax_n.append(ymin[i]/imageHeight)
         ymax_n.append(xmax[i]/imageWidth)
-        ymin_n.append(ymax[i]/imageWidth)
+        ymin_n.append(ymax[i]/imageHeight)
 
     return  xmin_n,xmax_n,ymax_n,ymin_n
 
