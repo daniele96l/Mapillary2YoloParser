@@ -4,10 +4,12 @@ import json
 import os, os.path
 from tqdm import tqdm
 
-Dir = '/Users/danieleligato/PycharmProjects/Mapillary2YoloParser/mtsd_v2_fully_annotated/lightannotation'
-SaveFolder = '/Users/danieleligato/PycharmProjects/Mapillary2YoloParser/mtsd_v2_fully_annotated/newAnnotation/'
+#Dir = '/Users/danieleligato/PycharmProjects/Mapillary2YoloParser/mtsd_v2_fully_annotated/lightannotation'
+Dir = '/Users/danieleligato/Desktop/annotationsOld'
+SaveFolder = '/Users/danieleligato/Desktop/untitled/'
 ListOfLabels = "/Users/danieleligato/PycharmProjects/Mapillary2YoloParser/NewList"
 path, dirs, files = next(os.walk(Dir))
+
 
 
 def openFile(filename):
@@ -16,7 +18,7 @@ def openFile(filename):
     return t
 
 
-def parse(t,filename):
+def parse(t,filename,number):
     global imageHeight, imageWidth
     labels,xmin,xmax,ymax,ymin =  ([] for i in range(5)) #just declare 5 list
     data = json.load(t)
@@ -44,13 +46,45 @@ def parse(t,filename):
                                 ymin.append(bbox.get(key3,'key not exist'))
                             if (key3 == 'ymax'):
                                 ymax.append(bbox.get(key3,'key not exist'))
-                    if (key2 == 'label'):
+                    if (key2 == 'label' and object.get(key2) != "other-sign"):
+                        if(str(search_string_in_file(ListOfLabels,object.get(key2))) == "None"):
+                            print(object.get(key2))
+                            number += 1
+                            print(number)
+                            complete_file(str(number) + " " + object.get(key2))
+
                         myline = search_string_in_file(ListOfLabels,object.get(key2)) -1
                         labels.append(myline)  # i take the label
    # print(labels,xmin)
 
     xmin_n, xmax_n, ymax_n, ymin_n = normalize(imageWidth, imageHeight, xmin, ymin, xmax, ymax)
-    saveFile(labels,xmin_n, xmax_n, ymax_n, ymin_n,filename)
+    # class x_center y_center width height f
+    #flip
+
+
+    widht, height, center_x, center_y = ([] for i in range(4))
+    for i in range(len(xmin)):
+        widht.append((xmax_n[i]-xmin_n[i]))
+        height.append((ymax_n[i]-ymin_n[i]))
+        center_x.append(xmin_n[i] + ((xmax_n[i]-xmin_n[i])/2))
+        center_y.append((ymin_n[i] + ((ymax_n[i]-ymin_n[i])/2)))
+
+
+
+    saveFile(labels,center_x, center_y, widht, height,filename)
+    return number
+
+def complete_file(newString):
+    with open("/Users/danieleligato/PycharmProjects/Mapillary2YoloParser/NewList", "a+") as file_object:
+        # Move read cursor to the start of file.
+        file_object.seek(0)
+        # If file is not empty then append '\n'
+        data = file_object.read(100)
+        if len(data) > 0:
+            file_object.write("\n")
+        # Append text at the end of file
+        file_object.write(newString)
+
 
 def search_string_in_file(file_name, string_to_search):
     """Search for the given string in file and return lines containing that string,
@@ -71,32 +105,35 @@ def search_string_in_file(file_name, string_to_search):
     # Return list of tuples containing line numbers and lines where string is found
 
 
-def saveFile(labels, xmin_n, xmax_n, ymax_n, ymin_n,filename):
-    with open(SaveFolder + filename, 'w') as file:
-        for i in range(len(xmin_n)):
-            file.write(str(labels[i]) + " " + str(xmin_n[i])+ " " + str(xmax_n[i])+ " " +  str(ymax_n[i])+ " " + str(ymin_n[i]) + "\n")
+def saveFile(labels, center_x, center_y, widht, height,filename):
+    with open(SaveFolder + filename.replace(".json",".txt") , 'w') as file:
+        for i in range(len(labels)):
+            file.write(str(labels[i]) + " " + str(center_x[i])+ " " + str(center_y[i])+ " " +  str(widht[i])+ " " + str(height[i]) + "\n")
 
 
 def normalize(imageWidth,imageHeight,xmin,ymin,xmax,ymax):
     xmin_n,xmax_n,ymax_n,ymin_n =  ([] for i in range(4)) #just declare 5 list
     for i in range(len(xmin)):
         xmin_n.append(xmin[i]/imageWidth)
-        xmax_n.append(ymin[i]/imageHeight)
-        ymax_n.append(xmax[i]/imageWidth)
-        ymin_n.append(ymax[i]/imageHeight)
+        ymin_n.append(ymin[i]/imageHeight)
+        xmax_n.append(xmax[i]/imageWidth)
+        ymax_n.append(ymax[i]/imageHeight)
 
     return  xmin_n,xmax_n,ymax_n,ymin_n
 
 
 
 def main():
+    global number
+    number = 1537
     LENGTH = len(os.listdir(Dir))  # Number of iterations required to fill pbar
     pbar = tqdm(total=LENGTH)  # Init pbar
+
     for filename in os.listdir(Dir):
         if (filename.endswith(".json")):
             pbar.update(n=1)  # Increments counter
             t = openFile(filename)  # open the n-file and return the content inside
-            parse(t,filename)  # parse the content of the file
+            number = parse(t,filename,number)  # parse the content of the file
             t.close()  # close the n-file
 
 
